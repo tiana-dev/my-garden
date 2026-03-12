@@ -109,39 +109,15 @@ const URGENCY_LABELS = {
 };
 
 const CONVERSATION = [
-  {
-    role: "me",
-    text: "I'd like to find or build an app that will tell me when I can start doing work in my garden."
-  },
-  {
-    role: "claude",
-    text: "I know your frost window. Let me make a little app that pulls the current forecast and tells you where you're at."
-  },
-  {
-    role: "me",
-    text: "The side panel isn't showing me anything. Maybe there was an error."
-  },
-  {
-    role: "claude",
-    text: "Ha, yes — I kept writing fragments instead of committing to the actual artifact. Let me fix that."
-  },
-  {
-    role: "me",
-    text: "I have a front bed: lenten/christmas roses, japanese ferns, rose bushes. A side bed with white eye liner lillies and dahlias. A tulip and iris bed, a pussy willow tree, four smoke bushes, a peony bed, a few planters, and a vegetable garden where I do carrots and potatoes."
-  },
-  {
-    role: "claude",
-    text: "Oh this is so much better — now I can make it actually about your garden instead of generic."
-  },
-  {
-    role: "me",
-    text: "Replace christmas/lenten roses with 'hellebores' because that's what I actually meant."
-  },
-  {
-    role: "me",
-    text: "The colors are a little dark — can we use spring tones like blues and greens?"
-  },
-
+  { role:"me", text:"I'm a multi-passionate human and often have a lot of projects and ideas but not a lot of time. As the weather warms I'm looking at my garden beds feeling slightly overwhelmed." },
+  { role:"claude", text:"I want to build you something." },
+  { role:"me", text:"Ok, Claude, let's do this... I have a front bed: hellebores, japanese ferns, rose bushes. A side bed with white eye liner lillies and dahlias. A tulip and iris bed, a pussy willow, four smoke bushes, a peony bed, a few planters, and a vegetable garden." },
+  { role:"claude", text:"Oh this is so much better — now I can make it actually about your garden instead of generic." },
+  { role:"me", text:"Not all my flower beds need attention, so I needed a way to know what to prioritize." },
+  { role:"claude", text:"Added a By Urgency view — Do This Week, Do This Month, Coming Up, and Not Yet." },
+  { role:"me", text:"The colors are a little dark — can we use spring tones like blues and greens?" },
+  { role:"me", text:"I'd like there to be an element that really highlights the AI collaboration." },
+  { role:"claude", text:"What if the app had an About panel that shows a snippet of our actual back-and-forth? Those moments show you directing AI, not AI doing a thing for you." },
 ];
 
 function buildTimeline() {
@@ -157,8 +133,7 @@ function buildTimeline() {
           plantEmoji: plant.emoji,
           bed: bed.name,
           bedIcon: bed.icon,
-          bedColor: bed.color,
-          ready,
+          id: bed.id + "_" + plant.name + "_" + task.text,
         });
       });
     });
@@ -170,6 +145,9 @@ export default function GardenApp() {
   const [forecast, setForecast] = useState(null);
   const [view, setView] = useState("timeline");
   const [activeBed, setActiveBed] = useState("front");
+  const [checked, setChecked] = useState({});
+  const [collapsed, setCollapsed] = useState({});
+  const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
     fetch("https://api.open-meteo.com/v1/forecast?latitude=40.6084&longitude=-75.4902&daily=temperature_2m_min,temperature_2m_max&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=7")
@@ -177,6 +155,9 @@ export default function GardenApp() {
       .then(d => setForecast(d.daily))
       .catch(() => {});
   }, []);
+
+  const toggleCheck = (id) => setChecked(prev => ({...prev, [id]: !prev[id]}));
+  const toggleCollapse = (u) => setCollapsed(prev => ({...prev, [u]: !prev[u]}));
 
   const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const bed = BEDS.find(b => b.id === activeBed);
@@ -189,10 +170,12 @@ export default function GardenApp() {
         *{box-sizing:border-box;margin:0;padding:0}
         button{cursor:pointer;border:none;transition:all 0.18s}
         button:hover{filter:brightness(0.93)}
-        .bubble-me { background:#e8f4ff; border:1px solid #b8d8f0; border-radius:12px 12px 3px 12px; padding:0.6rem 0.85rem; font-size:0.78rem; color:#1a3a5c; margin-left:2rem; }
-        .bubble-claude { background:#fff; border:1px solid #ddeee8; border-radius:12px 12px 12px 3px; padding:0.6rem 0.85rem; font-size:0.78rem; color:#1e3328; margin-right:2rem; }
-        .bubble-label-me { font-size:0.6rem; text-align:right; color:#7aaa90; margin-bottom:0.2rem; letter-spacing:0.05em; text-transform:uppercase; }
-        .bubble-label-claude { font-size:0.6rem; color:#7aaa90; margin-bottom:0.2rem; letter-spacing:0.05em; text-transform:uppercase; }
+        .bubble-me{background:#e8f4ff;border:1px solid #b8d8f0;border-radius:12px 12px 3px 12px;padding:0.6rem 0.85rem;font-size:0.78rem;color:#1a3a5c;margin-left:2rem;}
+        .bubble-claude{background:#fff;border:1px solid #ddeee8;border-radius:12px 12px 12px 3px;padding:0.6rem 0.85rem;font-size:0.78rem;color:#1e3328;margin-right:2rem;}
+        .bubble-label-me{font-size:0.6rem;text-align:right;color:#7aaa90;margin-bottom:0.2rem;letter-spacing:0.05em;text-transform:uppercase;}
+        .bubble-label-claude{font-size:0.6rem;color:#7aaa90;margin-bottom:0.2rem;letter-spacing:0.05em;text-transform:uppercase;}
+        .custom-check{width:18px;height:18px;border-radius:4px;border:2px solid #b0d0c0;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all 0.15s;}
+        .custom-check.done{background:#4a9e78;border-color:#4a9e78;}
       `}</style>
 
       {/* Header */}
@@ -246,28 +229,64 @@ export default function GardenApp() {
       {/* TIMELINE VIEW */}
       {view==="timeline" && (
         <div style={{padding:"1rem 1.25rem 2rem"}}>
+
+          {/* Show completed toggle */}
+          <div style={{display:"flex", justifyContent:"flex-end", marginBottom:"0.75rem"}}>
+            <button onClick={() => setShowCompleted(prev => !prev)} style={{
+              fontSize:"0.7rem", padding:"0.3rem 0.75rem", borderRadius:"20px",
+              background: showCompleted ? "#4a9e78" : "#f0f7f4",
+              color: showCompleted ? "#fff" : "#5a7a6a",
+              border:"1px solid " + (showCompleted ? "#4a9e78" : "#c0ddd0"),
+              fontFamily:"'Lora', serif",
+            }}>
+              {showCompleted ? "✓ Showing completed" : "Show completed"}
+            </button>
+          </div>
+
           {[1,2,3,4].map(u => {
-            const items = timeline[u];
-            if(items.length===0) return null;
+            const allItems = timeline[u];
+            if(allItems.length===0) return null;
             const meta = URGENCY_LABELS[u];
+            const isCollapsed = collapsed[u];
+            const doneCount = allItems.filter(item => checked[item.id]).length;
+            const displayItems = showCompleted ? allItems : allItems.filter(item => !checked[item.id]);
             return (
-              <div key={u} style={{marginBottom:"1.5rem"}}>
-                <div style={{display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"0.6rem"}}>
+              <div key={u} style={{marginBottom:"1.25rem"}}>
+                <button onClick={() => toggleCollapse(u)} style={{
+                  display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"0.6rem",
+                  background:"transparent", padding:0, width:"100%", textAlign:"left"
+                }}>
                   <div style={{width:"8px", height:"8px", borderRadius:"50%", background:meta.color, flexShrink:0}}></div>
                   <div style={{fontSize:"0.65rem", letterSpacing:"0.15em", textTransform:"uppercase", color:meta.color, fontWeight:700}}>{meta.label}</div>
-                  <div style={{fontSize:"0.65rem", color:"#90a8a0"}}>({items.length})</div>
-                </div>
-                <div style={{display:"flex", flexDirection:"column", gap:"0.4rem"}}>
-                  {items.map((item,i) => (
-                    <div key={i} style={{padding:"0.7rem 0.85rem", borderRadius:"6px", background:"#fff", border:"1px solid #ddeee8", borderLeft:"3px solid "+meta.color, display:"flex", gap:"0.6rem", alignItems:"flex-start"}}>
-                      <span style={{flexShrink:0, fontSize:"1.1rem"}}>{item.plantEmoji}</span>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:"0.76rem", color:"#1e3328"}}>{item.text}</div>
-                        <div style={{fontSize:"0.65rem", color:"#7aaa90", marginTop:"0.2rem"}}>{item.bedIcon} {item.bed} — {item.plant}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                  <div style={{fontSize:"0.65rem", color:"#90a8a0"}}>
+                    {doneCount > 0 ? `${doneCount}/${allItems.length} done` : `(${allItems.length})`}
+                  </div>
+                  <div style={{marginLeft:"auto", fontSize:"0.65rem", color:"#90a8a0"}}>{isCollapsed ? "▸ show" : "▾ hide"}</div>
+                </button>
+
+                {!isCollapsed && (
+                  <div style={{display:"flex", flexDirection:"column", gap:"0.4rem"}}>
+                    {displayItems.length === 0 ? (
+                      <div style={{fontSize:"0.74rem", color:"#7aaa90", fontStyle:"italic", padding:"0.5rem 0.85rem"}}>All done ✓</div>
+                    ) : displayItems.map((item) => {
+                      const isDone = checked[item.id];
+                      return (
+                        <div key={item.id} style={{padding:"0.7rem 0.85rem", borderRadius:"6px", background: isDone ? "#f5f9f7" : "#fff", border:"1px solid #ddeee8", borderLeft:"3px solid "+(isDone ? "#b0d0c0" : meta.color), display:"flex", gap:"0.6rem", alignItems:"flex-start", opacity: isDone ? 0.6 : 1, transition:"all 0.2s"}}>
+                          <div
+                            className={"custom-check" + (isDone ? " done" : "")}
+                            onClick={() => toggleCheck(item.id)}
+                          >
+                            {isDone && <span style={{color:"#fff", fontSize:"0.7rem", fontWeight:700}}>✓</span>}
+                          </div>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:"0.76rem", color: isDone ? "#7aaa90" : "#1e3328", textDecoration: isDone ? "line-through" : "none"}}>{item.text}</div>
+                            <div style={{fontSize:"0.65rem", color:"#7aaa90", marginTop:"0.2rem"}}>{item.bedIcon} {item.bed} — {item.plant}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -287,9 +306,20 @@ export default function GardenApp() {
             </div>
           </div>
           <div style={{padding:"1rem 1.25rem 2rem"}}>
-            <div style={{display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"1rem"}}>
-              <span style={{fontSize:"1.4rem"}}>{bed.icon}</span>
-              <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:"1.25rem", fontWeight:700, color:"#1e3328"}}>{bed.name}</h2>
+            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"1rem"}}>
+              <div style={{display:"flex", alignItems:"center", gap:"0.5rem"}}>
+                <span style={{fontSize:"1.4rem"}}>{bed.icon}</span>
+                <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:"1.25rem", fontWeight:700, color:"#1e3328"}}>{bed.name}</h2>
+              </div>
+              <button onClick={() => setShowCompleted(prev => !prev)} style={{
+                fontSize:"0.7rem", padding:"0.3rem 0.75rem", borderRadius:"20px",
+                background: showCompleted ? "#4a9e78" : "#f0f7f4",
+                color: showCompleted ? "#fff" : "#5a7a6a",
+                border:"1px solid " + (showCompleted ? "#4a9e78" : "#c0ddd0"),
+                fontFamily:"'Lora', serif",
+              }}>
+                {showCompleted ? "✓ Showing completed" : "Show completed"}
+              </button>
             </div>
             {bed.plants.map(plant => (
               <div key={plant.name} style={{marginBottom:"1rem", padding:"1rem", borderRadius:"8px", background:"#fff", border:"1px solid #ddeee8", borderTop:"3px solid "+bed.color}}>
@@ -301,12 +331,24 @@ export default function GardenApp() {
                   </div>
                 </div>
                 <div style={{display:"flex", flexDirection:"column", gap:"0.3rem", marginTop:"0.55rem"}}>
-                  {plant.tasks.map((task,ti) => {
+                  {plant.tasks.map((task, ti) => {
                     const ready = task.ready();
+                    const taskId = activeBed + "_" + plant.name + "_" + task.text;
+                    const isDone = checked[taskId];
+                    if (!showCompleted && isDone) return null;
                     return (
-                      <div key={ti} style={{display:"flex", gap:"0.5rem", alignItems:"flex-start", opacity:ready?1:0.4, fontSize:"0.76rem"}}>
-                        <span style={{color:ready?"#4a9e78":"#b0c8c0", flexShrink:0}}>{ready?"✓":"○"}</span>
-                        <span style={{color:ready?"#1e3328":"#7aaa90", fontStyle:ready?"normal":"italic"}}>{task.text}</span>
+                      <div key={ti} style={{display:"flex", gap:"0.5rem", alignItems:"flex-start", opacity: !ready ? 0.4 : isDone ? 0.6 : 1, fontSize:"0.76rem", transition:"all 0.2s"}}>
+                        {ready ? (
+                          <div
+                            className={"custom-check" + (isDone ? " done" : "")}
+                            onClick={() => toggleCheck(taskId)}
+                          >
+                            {isDone && <span style={{color:"#fff", fontSize:"0.7rem", fontWeight:700}}>✓</span>}
+                          </div>
+                        ) : (
+                          <span style={{color:"#b0c8c0", flexShrink:0, marginTop:"1px"}}>○</span>
+                        )}
+                        <span style={{color: isDone ? "#7aaa90" : ready ? "#1e3328" : "#7aaa90", fontStyle: ready ? "normal" : "italic", textDecoration: isDone ? "line-through" : "none"}}>{task.text}</span>
                       </div>
                     );
                   })}
@@ -321,15 +363,27 @@ export default function GardenApp() {
       {view==="about" && (
         <div style={{padding:"1.25rem 1.25rem 2rem"}}>
           <div style={{marginBottom:"1.25rem"}}>
-            <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", fontWeight:700, color:"#1e3328", marginBottom:"0.4rem"}}>Built with Claude AI</h2>
-            <p style={{fontSize:"0.78rem", lineHeight:1.7, color:"#3a5a48"}}>
-              This app started as a simple question: <em>"when can I start doing work in my garden?"</em> I collaborated with Claude (Anthropic's AI) to turn that question into a working React app — personalized to my actual garden beds and plants — in a single conversation.
+            <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", fontWeight:700, color:"#1e3328", marginBottom:"0.6rem"}}>Built with Claude AI</h2>
+            <p style={{fontSize:"0.78rem", lineHeight:1.8, color:"#3a5a48"}}>
+              I'm a multi-passionate human and often have a lot of projects and ideas but not a lot of time. As the weather warms and the snow melts, I'm looking at my garden beds feeling slightly overwhelmed. It's been largely intuitive, but this year I'm trying something new. I've asked Claude AI to guide me.
+            </p>
+            <p style={{fontSize:"0.78rem", lineHeight:1.8, color:"#3a5a48", marginTop:"0.75rem"}}>
+              I presented the choice of giving me the name of an app or creating something — and Claude's response was <em>"I want to build you something."</em> Ok, Claude, let's do this.
+            </p>
+            <p style={{fontSize:"0.78rem", lineHeight:1.8, color:"#3a5a48", marginTop:"0.75rem"}}>
+              If it reads as simple, that's because it really was.
             </p>
           </div>
 
           <div style={{marginBottom:"1.25rem", padding:"0.85rem 1rem", borderRadius:"8px", background:"#fff", border:"1px solid #ddeee8"}}>
             <div style={{fontSize:"0.65rem", letterSpacing:"0.15em", textTransform:"uppercase", color:"#7aaa90", marginBottom:"0.75rem", fontWeight:700}}>What I directed</div>
-            {["Described my specific garden beds and plants","Corrected plant names (christmas roses → hellebores)","Asked for urgency-based sorting instead of just by bed","Chose the spring color palette","Pushed back when the layout wasn't working right"].map((item,i) => (
+            {[
+              "Described my specific garden beds and plants",
+              "Corrected plant names (christmas roses → hellebores)",
+              "Asked for urgency-based sorting instead of just by bed",
+              "Chose the spring color palette",
+              "Pushed back when the layout wasn't working right",
+            ].map((item,i) => (
               <div key={i} style={{display:"flex", gap:"0.5rem", alignItems:"flex-start", marginBottom:"0.4rem", fontSize:"0.76rem", color:"#1e3328"}}>
                 <span style={{color:"#4a9e78", flexShrink:0}}>✓</span>
                 <span>{item}</span>
@@ -340,18 +394,12 @@ export default function GardenApp() {
           <div style={{marginBottom:"1.25rem"}}>
             <div style={{fontSize:"0.65rem", letterSpacing:"0.15em", textTransform:"uppercase", color:"#7aaa90", marginBottom:"0.75rem", fontWeight:700}}>A few moments from the conversation</div>
             <div style={{display:"flex", flexDirection:"column", gap:"0.75rem"}}>
-              {CONVERSATION.map((msg, i) => (
+              {CONVERSATION.map((msg,i) => (
                 <div key={i}>
-                  {msg.role === "me" ? (
-                    <>
-                      <div className="bubble-label-me">Me</div>
-                      <div className="bubble-me">{msg.text}</div>
-                    </>
+                  {msg.role==="me" ? (
+                    <><div className="bubble-label-me">Me</div><div className="bubble-me">{msg.text}</div></>
                   ) : (
-                    <>
-                      <div className="bubble-label-claude">Claude</div>
-                      <div className="bubble-claude">{msg.text}</div>
-                    </>
+                    <><div className="bubble-label-claude">Claude</div><div className="bubble-claude">{msg.text}</div></>
                   )}
                 </div>
               ))}
@@ -359,7 +407,7 @@ export default function GardenApp() {
           </div>
 
           <div style={{padding:"0.85rem 1rem", borderRadius:"8px", background:"linear-gradient(135deg, rgba(74,158,120,0.1) 0%, rgba(90,143,191,0.1) 100%)", border:"1px solid #c0ddd0", fontSize:"0.76rem", lineHeight:1.7, color:"#3a5a48"}}>
-            <strong style={{color:"#1e3328"}}>The takeaway:</strong> The gardening knowledge and UI decisions came from the AI. The judgment calls — what to include, how to frame it, what to cut, where it was going — came from me. That's what working with AI actually looks like.
+            <strong style={{color:"#1e3328"}}>The takeaway:</strong> The gardening knowledge and most of the UI decisions came from the AI. The judgment calls — what to include, how to frame it, what to cut, where it was going — came from me. The result is a tool I'll actually open on a Saturday morning.
           </div>
         </div>
       )}
