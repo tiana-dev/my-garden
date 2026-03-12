@@ -108,6 +108,42 @@ const URGENCY_LABELS = {
   4: { label: "Not Yet / Later", color: "#a0b4bc", bg: "rgba(160,180,188,0.07)" },
 };
 
+const CONVERSATION = [
+  {
+    role: "me",
+    text: "I'd like to find or build an app that will tell me when I can start doing work in my garden."
+  },
+  {
+    role: "claude",
+    text: "I know your frost window. Let me make a little app that pulls the current forecast and tells you where you're at."
+  },
+  {
+    role: "me",
+    text: "The side panel isn't showing me anything. Maybe there was an error."
+  },
+  {
+    role: "claude",
+    text: "Ha, yes — I kept writing fragments instead of committing to the actual artifact. Let me fix that."
+  },
+  {
+    role: "me",
+    text: "I have a front bed: lenten/christmas roses, japanese ferns, rose bushes. A side bed with white eye liner lillies and dahlias. A tulip and iris bed, a pussy willow tree, four smoke bushes, a peony bed, a few planters, and a vegetable garden where I do carrots and potatoes."
+  },
+  {
+    role: "claude",
+    text: "Oh this is so much better — now I can make it actually about your garden instead of generic."
+  },
+  {
+    role: "me",
+    text: "Replace christmas/lenten roses with 'hellebores' because that's what I actually meant."
+  },
+  {
+    role: "me",
+    text: "The colors are a little dark — can we use spring tones like blues and greens?"
+  },
+
+];
+
 function buildTimeline() {
   const groups = {1:[], 2:[], 3:[], 4:[]};
   BEDS.forEach(bed => {
@@ -153,6 +189,10 @@ export default function GardenApp() {
         *{box-sizing:border-box;margin:0;padding:0}
         button{cursor:pointer;border:none;transition:all 0.18s}
         button:hover{filter:brightness(0.93)}
+        .bubble-me { background:#e8f4ff; border:1px solid #b8d8f0; border-radius:12px 12px 3px 12px; padding:0.6rem 0.85rem; font-size:0.78rem; color:#1a3a5c; margin-left:2rem; }
+        .bubble-claude { background:#fff; border:1px solid #ddeee8; border-radius:12px 12px 12px 3px; padding:0.6rem 0.85rem; font-size:0.78rem; color:#1e3328; margin-right:2rem; }
+        .bubble-label-me { font-size:0.6rem; text-align:right; color:#7aaa90; margin-bottom:0.2rem; letter-spacing:0.05em; text-transform:uppercase; }
+        .bubble-label-claude { font-size:0.6rem; color:#7aaa90; margin-bottom:0.2rem; letter-spacing:0.05em; text-transform:uppercase; }
       `}</style>
 
       {/* Header */}
@@ -189,9 +229,9 @@ export default function GardenApp() {
 
       {/* View toggle */}
       <div style={{display:"flex", background:"#fff", borderBottom:"2px solid #ddeee8"}}>
-        {[{id:"timeline", label:"📅 By Urgency"},{id:"beds", label:"🌿 By Bed"}].map(v => (
+        {[{id:"timeline", label:"📅 By Urgency"},{id:"beds", label:"🌿 By Bed"},{id:"about", label:"✨ How I Built This"}].map(v => (
           <button key={v.id} onClick={() => setView(v.id)} style={{
-            flex:1, padding:"0.7rem", fontSize:"0.78rem", fontWeight:700,
+            flex:1, padding:"0.7rem 0.25rem", fontSize:"0.7rem", fontWeight:700,
             fontFamily:"'Playfair Display',serif",
             background:"transparent",
             color:view===v.id?"#3a8a60":"#90a8a0",
@@ -275,6 +315,53 @@ export default function GardenApp() {
             ))}
           </div>
         </>
+      )}
+
+      {/* ABOUT VIEW */}
+      {view==="about" && (
+        <div style={{padding:"1.25rem 1.25rem 2rem"}}>
+          <div style={{marginBottom:"1.25rem"}}>
+            <h2 style={{fontFamily:"'Playfair Display',serif", fontSize:"1.1rem", fontWeight:700, color:"#1e3328", marginBottom:"0.4rem"}}>Built with Claude AI</h2>
+            <p style={{fontSize:"0.78rem", lineHeight:1.7, color:"#3a5a48"}}>
+              This app started as a simple question: <em>"when can I start doing work in my garden?"</em> I collaborated with Claude (Anthropic's AI) to turn that question into a working React app — personalized to my actual garden beds and plants — in a single conversation.
+            </p>
+          </div>
+
+          <div style={{marginBottom:"1.25rem", padding:"0.85rem 1rem", borderRadius:"8px", background:"#fff", border:"1px solid #ddeee8"}}>
+            <div style={{fontSize:"0.65rem", letterSpacing:"0.15em", textTransform:"uppercase", color:"#7aaa90", marginBottom:"0.75rem", fontWeight:700}}>What I directed</div>
+            {["Described my specific garden beds and plants","Corrected plant names (christmas roses → hellebores)","Asked for urgency-based sorting instead of just by bed","Chose the spring color palette","Pushed back when the layout wasn't working right"].map((item,i) => (
+              <div key={i} style={{display:"flex", gap:"0.5rem", alignItems:"flex-start", marginBottom:"0.4rem", fontSize:"0.76rem", color:"#1e3328"}}>
+                <span style={{color:"#4a9e78", flexShrink:0}}>✓</span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{marginBottom:"1.25rem"}}>
+            <div style={{fontSize:"0.65rem", letterSpacing:"0.15em", textTransform:"uppercase", color:"#7aaa90", marginBottom:"0.75rem", fontWeight:700}}>A few moments from the conversation</div>
+            <div style={{display:"flex", flexDirection:"column", gap:"0.75rem"}}>
+              {CONVERSATION.map((msg, i) => (
+                <div key={i}>
+                  {msg.role === "me" ? (
+                    <>
+                      <div className="bubble-label-me">Me</div>
+                      <div className="bubble-me">{msg.text}</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bubble-label-claude">Claude</div>
+                      <div className="bubble-claude">{msg.text}</div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{padding:"0.85rem 1rem", borderRadius:"8px", background:"linear-gradient(135deg, rgba(74,158,120,0.1) 0%, rgba(90,143,191,0.1) 100%)", border:"1px solid #c0ddd0", fontSize:"0.76rem", lineHeight:1.7, color:"#3a5a48"}}>
+            <strong style={{color:"#1e3328"}}>The takeaway:</strong> The gardening knowledge and UI decisions came from the AI. The judgment calls — what to include, how to frame it, what to cut, where it was going — came from me. That's what working with AI actually looks like.
+          </div>
+        </div>
       )}
     </div>
   );
